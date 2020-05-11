@@ -2,31 +2,35 @@ from .base_page import BasePage
 from .locators import ProductPageLocators
 from selenium.webdriver.common.by import By
 
-class ProductPage(BasePage): 
-    def press_button_add_to_basket(self):
-        login_link = self.browser.find_element(*ProductPageLocators.ADD_TO_BASKET)
-        login_link.click()
-        
-    def should_be_message_about_adding(self):
+class ProductPage(BasePage):
+    def add_to_cart(self, is_promo=False) -> None:
+        self.browser.find_element(
+            *ProductPageLocators.BUTTON_ADD_TO_CART).click()
 
-        assert self.is_element_present(*ProductPageLocators.PRODUCT_NAME), (
-            "Product name is not presented")
-        assert self.is_element_present(*ProductPageLocators.MESSAGE_ABOUT_ADDING), (
-            "Message about adding is not presented")
+        if is_promo:
+            self.solve_quiz_and_get_code()
 
-        product_name = self.browser.find_element(*ProductPageLocators.PRODUCT_NAME).text
-        message = self.browser.find_element(*ProductPageLocators.MESSAGE_ABOUT_ADDING).text
+    def should_be_present_in_cart(self) -> None:
+        assert self.is_element_present(
+            *ProductPageLocators.PRODUCT_NAME), "Product name is not present"
+        assert self.is_element_present(
+            *ProductPageLocators.ALERT_ADDED_TO_CART
+        ), "No alert that a product has been added to cart"
+        alert_text = self.browser.find_element(
+            *ProductPageLocators.ALERT_ADDED_TO_CART).text
+        product_name = self.browser.find_element(
+            *ProductPageLocators.PRODUCT_NAME).text
+        assert product_name == alert_text, \
+            f"The alert contains wrong product name: {alert_text} - {product_name}"
 
-        assert product_name in message, "No product name in the message"  
-   
-    def should_be_message_basket_total(self):
-        # Сначала проверяем, что элементы присутствуют на странице
-        assert self.is_element_present(*ProductPageLocators.MESSAGE_BASKET_TOTAL), (
-            "Message basket total is not presented")
-        assert self.is_element_present(*ProductPageLocators.PRODUCT_PRICE), (
-            "Product price is not presented")
-        # Затем получаем текст элементов для проверки
-        message_basket_total = self.browser.find_element(*ProductPageLocators.MESSAGE_BASKET_TOTAL).text
-        product_price = self.browser.find_element(*ProductPageLocators.PRODUCT_PRICE).text
-        # Проверяем, что цена товара присутствует в сообщении со стоимостью корзины
-        assert product_price in message_basket_total, "No product price in the message"
+    def should_check_overall_cost(self) -> None:
+        assert self.is_element_present(
+            *ProductPageLocators.PRODUCT_PRICE), "Product price is not present"
+        assert self.is_element_present(*ProductPageLocators.ALERT_CART_STATUS
+                                       ), "No alert with cart status"
+        alert_text = self.browser.find_element(
+            *ProductPageLocators.ALERT_CART_STATUS).text.split()[-1]
+        product_cost = self.browser.find_element(
+            *ProductPageLocators.PRODUCT_PRICE).text
+        assert product_cost == alert_text, \
+            f"Product cost in cart is not equal to the product cost {alert_text} != {product_cost}"
